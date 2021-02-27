@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+- name: mysql-pass
+  literals:
+    - databaseName=wordpress
+    - username=wordpress-db-user
+    - password=aNotSoSecretPassword
+- name: mysql-root-pass
+  literals:
+  - password=aNotSoSecretRootPassword
+resources:
+  - wordpress-deployment.yaml
+  - mysql-deployment.yaml

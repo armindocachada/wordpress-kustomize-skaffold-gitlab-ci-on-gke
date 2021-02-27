@@ -1,0 +1,37 @@
+apiVersion: skaffold/v2beta12
+kind: Config
+build:
+  artifacts:
+  - image: wordpress-example
+    context: .
+    docker:
+      dockerfile: Dockerfile_wordpress
+    sync:
+      infer:
+        - '**/*.php'
+        - '**/*.html'
+        - '**/*.js'
+deploy:
+  kustomize:
+    paths:
+    - overlays/local
+
+profiles:
+- name: production
+  build:
+    googleCloudBuild:
+      projectId: "{{.GCP_PROJECT_ID}}"
+      kanikoImage: "gcr.io/kaniko-project/executor"
+    artifacts:
+    - image: "gcr.io/proj-projectid/wordpress"
+      context: .
+      kaniko:
+          cache: {}
+          dockerfile: Dockerfile_wordpress
+          buildArgs:
+              WORDPRESS_VERSION: "5.6.2"
+  deploy:
+    kustomize:
+        paths:
+        - overlays/production
+        defaultNamespace: "{{.PROJECT_NAMESPACE}}"
