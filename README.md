@@ -17,4 +17,4 @@ Here is a rough outline of this series:
 
  4. Creating a gitlab-ci.yml to setup CI/CD
 
-
+https://www.youtube.com/watch?v=9TaZtZhrykU&list=PL3OV2Akk7XpBVyWblgVJJywpmk6ihrOYk
