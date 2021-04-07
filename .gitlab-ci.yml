@@ -1,0 +1,107 @@
+image: "armindocachada/skaffold-and-gcloud"
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - review
+  - production
+
+variables:
+  DOMAIN_NAME: example.com
+  PRODUCTION_DOMAIN_NAME: example.com
+
+build_review:
+  stage: build
+  environment:
+    name: $CI_COMMIT_REF_NAME
+    url: "https://$CI_ENVIRONMENT_SLUG.$DOMAIN_NAME"
+    on_stop: stop_review
+  script:
+    - mkdir -p build && skaffold build -p review --file-output build/build-state.json
+  artifacts:
+    paths:
+      - build/build-state.json
+  only:
+    - branches
+  except:
+    - master
+
+
+build_production:
+  stage: build
+  environment:
+    name: production
+    url: "https://$PRODUCTION_DOMAIN_NAME"
+  script:
+    - echo 'doing build_production'
+    - mkdir -p build && skaffold build -p production --file-output build/build-state.json
+  artifacts:
+    paths:
+      - build/build-state.json
+  only:
+    - master
+
+recreate_review:
+  stage: review
+  script:
+    - echo 'doing recreate_review'
+    - skaffold delete -p review
+    - skaffold deploy -p review -a build/build-state.json --status-check=true
+  environment:
+    name: $CI_COMMIT_REF_NAME
+    url: "https://$CI_ENVIRONMENT_SLUG.$DOMAIN_NAME"
+    on_stop: stop_review
+  when: manual
+  only:
+    - branches
+  except:
+    - master
+  dependencies:
+  - build_review
+
+deploy_review:
+  stage: review
+  script:
+    - echo 'doing deploy_review'
+    - skaffold deploy -p review -a build/build-state.json --status-check=true
+  environment:
+    name: $CI_COMMIT_REF_NAME
+    url: "https://$CI_ENVIRONMENT_SLUG.$DOMAIN_NAME"
+    on_stop: stop_review
+  only:
+    - branches
+  except:
+    - master
+  dependencies:
+  - build_review
+
+stop_review:
+  stage: review
+  script:
+    - echo 'doing stop_review'
+    - skaffold delete -p review
+  environment:
+    name: $CI_COMMIT_REF_NAME
+    url: "https://$CI_ENVIRONMENT_SLUG.$DOMAIN_NAME"
+    action: stop
+  dependencies:
+    - build_review
+  when: manual
+  except:
+    - master
+
+deploy_production:
+  stage: production
+  script:
+    - echo doing deploy_production
+    - skaffold deploy -p production -a build/build-state.json --status-check=true
+  environment:
+    name: production
+    url: "https://$PRODUCTION_DOMAIN_NAME"
+  when: manual
+  only:
+    - master
+  dependencies:
+  - build_production
